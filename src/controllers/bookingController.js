@@ -205,6 +205,7 @@ export const createBooking = async (req, res) => {
       success: true,
       message: "Booking created successfully",
       booking: {
+        id: booking._id,
         bookingId: booking.bookingId,
         station: station.stationName,
         charger: charger.chargerCode,

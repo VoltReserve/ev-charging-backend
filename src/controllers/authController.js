@@ -6,6 +6,15 @@ import generateToken from "../utils/generateToken.js";
 
 const isValidMobile = (mobile) => /^[6-9]\d{9}$/.test(mobile);
 
+const formatUserProfile = (user) => ({
+  id: user._id,
+  fullName: user.fullName,
+  mobile: user.mobile,
+  carModel: user.carModel,
+  registrationNumber: user.registrationNumber,
+  isVerified: user.isVerified,
+});
+
 export const sendOTP = async (req, res) => {
   try {
     const { mobile } = req.body;
@@ -92,13 +101,10 @@ export const verifyOTP = async (req, res) => {
 
       return res.status(200).json({
         success: true,
+        isNewUser: false,
         message: "Login successful",
         token,
-        user: {
-          id: user._id,
-          name: user.fullName,
-          mobile: user.mobile,
-        },
+        user: formatUserProfile(user),
       });
     }
 
@@ -106,6 +112,9 @@ export const verifyOTP = async (req, res) => {
       success: true,
       isNewUser: true,
       message: "Complete your profile",
+      user: {
+        mobile,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -171,10 +180,53 @@ export const completeProfile = async (req, res) => {
       success: true,
       message: "Registration successful",
       token,
-      user: {
-        fullName: user.fullName,
-        mobile: user.mobile,
-      },
+      user: formatUserProfile(user),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      return res.status(400).json({
+        success: false,
+        message: `${field} already exists`,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullName, carModel, registrationNumber } = req.body;
+
+    if (!fullName || !carModel || !registrationNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name, car model, and registration number are required",
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.fullName = fullName.trim();
+    user.carModel = carModel.trim();
+    user.registrationNumber = registrationNumber.trim().toUpperCase();
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: formatUserProfile(user),
     });
   } catch (error) {
     if (error.code === 11000) {

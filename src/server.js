@@ -29,8 +29,9 @@ app.use("/api/bookings", bookingRoutes);
 const startServer = async () => {
   await connectDB();
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    const localUrl = process.env.API_URL || `http://localhost:${PORT}`;
+    console.log(`Server running on ${localUrl}`);
   });
 };
 

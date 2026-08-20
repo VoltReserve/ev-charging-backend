@@ -5,7 +5,9 @@ import {
   getBookingsByStation,
   getChargerUtilization,
   getActiveBookingsReport,
+  getUpcomingBookingsReport,
   getCompletedBookingsReport,
+  getCancelledBookingsReport,
   getDateWiseReport,
   getUserReport,
   exportCsvReport,
@@ -20,10 +22,16 @@ router.get("/reports/bookings", requireAdmin, getBookingsReport);
 router.get("/reports/bookings-by-station", requireAdmin, getBookingsByStation);
 router.get("/reports/charger-utilization", requireAdmin, getChargerUtilization);
 router.get("/reports/active-bookings", requireAdmin, getActiveBookingsReport);
+router.get("/reports/upcoming-bookings", requireAdmin, getUpcomingBookingsReport);
 router.get(
   "/reports/completed-bookings",
   requireAdmin,
   getCompletedBookingsReport
+);
+router.get(
+  "/reports/cancelled-bookings",
+  requireAdmin,
+  getCancelledBookingsReport
 );
 router.get("/reports/date-wise", requireAdmin, getDateWiseReport);
 router.get("/reports/users", requireAdmin, getUserReport);

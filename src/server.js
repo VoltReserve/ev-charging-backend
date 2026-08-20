@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
+import { startBookingStatusJob } from "./jobs/bookingStatusJob.js";
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import stationRoutes from "./routes/stationRoutes.js";
@@ -28,6 +29,7 @@ app.use("/api/bookings", bookingRoutes);
 
 const startServer = async () => {
   await connectDB();
+  startBookingStatusJob();
 
   app.listen(PORT, "0.0.0.0", () => {
     const localUrl = process.env.API_URL || `http://localhost:${PORT}`;

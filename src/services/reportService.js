@@ -10,6 +10,11 @@ const completedBookingFilter = (now = getNow()) => ({
   $or: [{ status: "Completed" }, { endTime: { $lt: now }, status: { $ne: "Cancelled" } }],
 });
 
+const upcomingBookingFilter = (now = getNow()) => ({
+  status: { $nin: ["Cancelled", "Completed"] },
+  startTime: { $gt: now },
+});
+
 const activeBookingFilter = (now = getNow()) => ({
   status: { $ne: "Cancelled" },
   startTime: { $lte: now },
@@ -24,6 +29,7 @@ export const getDashboardSummary = async () => {
     totalChargers,
     totalUsers,
     totalBookings,
+    upcomingBookings,
     activeBookings,
     completedBookings,
     cancelledBookings,
@@ -32,6 +38,7 @@ export const getDashboardSummary = async () => {
     Charger.countDocuments(),
     User.countDocuments(),
     Booking.countDocuments(),
+    Booking.countDocuments(upcomingBookingFilter(now)),
     Booking.countDocuments(activeBookingFilter(now)),
     Booking.countDocuments(completedBookingFilter(now)),
     Booking.countDocuments({ status: "Cancelled" }),
@@ -42,6 +49,7 @@ export const getDashboardSummary = async () => {
     totalChargers,
     totalUsers,
     totalBookings,
+    upcomingBookings,
     activeBookings,
     completedBookings,
     cancelledBookings,
@@ -114,42 +122,48 @@ export const getChargerUtilization = async () => {
   return results;
 };
 
-export const getActiveBookings = async () => {
-  const now = getNow();
+const formatBookingRow = (booking) => ({
+  bookingId: booking.bookingId,
+  station: booking.stationId?.stationName || "—",
+  charger: booking.chargerId?.chargerCode || "—",
+  user: booking.userId?.fullName || "—",
+  mobile: booking.userId?.mobile || "—",
+  bookingDate: booking.bookingDate
+    ? booking.bookingDate.toISOString().split("T")[0]
+    : "—",
+  startTime: booking.startTime,
+  endTime: booking.endTime,
+  status: booking.status,
+});
 
-  const bookings = await Booking.find(activeBookingFilter(now))
+const findBookings = (filter, sort) =>
+  Booking.find(filter)
     .populate("stationId", "stationName")
     .populate("chargerId", "chargerCode")
-    .populate("userId", "fullName")
-    .sort({ startTime: 1 });
+    .populate("userId", "fullName mobile")
+    .sort(sort);
 
-  return bookings.map((booking) => ({
-    bookingId: booking.bookingId,
-    station: booking.stationId?.stationName,
-    charger: booking.chargerId?.chargerCode,
-    user: booking.userId?.fullName,
-  }));
+export const getUpcomingBookings = async () => {
+  const now = getNow();
+  const bookings = await findBookings(upcomingBookingFilter(now), { startTime: 1 });
+  return bookings.map(formatBookingRow);
+};
+
+export const getActiveBookings = async () => {
+  const now = getNow();
+  const bookings = await findBookings(activeBookingFilter(now), { startTime: 1 });
+  return bookings.map(formatBookingRow);
 };
 
 export const getCompletedBookings = async () => {
   const now = getNow();
+  const bookings = await findBookings(completedBookingFilter(now), { endTime: -1 });
+  return bookings.map(formatBookingRow);
+};
 
-  const bookings = await Booking.find(completedBookingFilter(now))
-    .populate("stationId", "stationName")
-    .populate("chargerId", "chargerCode")
-    .populate("userId", "fullName")
-    .sort({ endTime: -1 });
-
-  return bookings.map((booking) => ({
-    bookingId: booking.bookingId,
-    station: booking.stationId?.stationName,
-    charger: booking.chargerId?.chargerCode,
-    user: booking.userId?.fullName,
-    bookingDate: booking.bookingDate.toISOString().split("T")[0],
-    startTime: booking.startTime,
-    endTime: booking.endTime,
-    status: booking.status,
-  }));
+export const getCancelledBookings = async () => {
+  const bookings = await findBookings({ status: "Cancelled" }, { updatedAt: -1 });
+  return bookings.map(formatBookingRow);
 };
 
 export const getDateWiseReport = async (from, to) => {
@@ -172,14 +186,16 @@ export const getDateWiseReport = async (from, to) => {
     bookingDate: { $gte: fromStart, $lte: toEnd },
   };
 
-  const [totalBookings, completedBookings, cancelledBookings] = await Promise.all([
-    Booking.countDocuments(dateFilter),
-    Booking.countDocuments({
-      ...dateFilter,
-      ...completedBookingFilter(),
-    }),
-    Booking.countDocuments({ ...dateFilter, status: "Cancelled" }),
-  ]);
+  const [totalBookings, completedBookings, cancelledBookings, bookings] =
+    await Promise.all([
+      Booking.countDocuments(dateFilter),
+      Booking.countDocuments({
+        ...dateFilter,
+        ...completedBookingFilter(),
+      }),
+      Booking.countDocuments({ ...dateFilter, status: "Cancelled" }),
+      findBookings(dateFilter, { bookingDate: -1, startTime: -1 }),
+    ]);
 
   return {
     from,
@@ -187,6 +203,7 @@ export const getDateWiseReport = async (from, to) => {
     totalBookings,
     completedBookings,
     cancelledBookings,
+    bookings: bookings.map(formatBookingRow),
   };
 };
 

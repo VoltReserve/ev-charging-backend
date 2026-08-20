@@ -3,6 +3,7 @@ import Booking from "../models/Booking.js";
 import Charger from "../models/Charger.js";
 import Station from "../models/Station.js";
 import generateBookingId from "../utils/generateBookingId.js";
+import { updateBookingStatuses } from "../jobs/bookingStatusJob.js";
 import {
   combineDateAndTime,
   filterAvailableSlots,
@@ -226,6 +227,8 @@ export const createBooking = async (req, res) => {
 
 export const getMyBookings = async (req, res) => {
   try {
+    await updateBookingStatuses();
+
     const bookings = await Booking.find({ userId: req.user.id })
       .populate("stationId", "stationName")
       .populate("chargerId", "chargerCode chargerType")
@@ -254,6 +257,8 @@ export const getMyBookings = async (req, res) => {
 
 export const cancelBooking = async (req, res) => {
   try {
+    await updateBookingStatuses();
+
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -1,11 +1,31 @@
 import mongoose from "mongoose";
 import Station from "../models/Station.js";
+import Charger from "../models/Charger.js";
 
-const formatStation = (station) => ({
+const formatStation = (station, chargersCount = 0) => ({
   id: station._id,
   stationName: station.stationName,
   status: station.status,
+  chargersCount,
 });
+
+const getChargerCountsByStation = async (stationIds) => {
+  if (!stationIds.length) return new Map();
+
+  const counts = await Charger.aggregate([
+    { $match: { stationId: { $in: stationIds } } },
+    { $group: { _id: "$stationId", count: { $sum: 1 } } },
+  ]);
+
+  return new Map(counts.map((row) => [String(row._id), row.count]));
+};
+
+const formatStationsWithCounts = async (stations) => {
+  const countMap = await getChargerCountsByStation(stations.map((station) => station._id));
+  return stations.map((station) =>
+    formatStation(station, countMap.get(String(station._id)) ?? 0)
+  );
+};
 
 const isValidStatus = (status) => ["Active", "Inactive"].includes(status);
 
@@ -62,7 +82,7 @@ export const getStations = async (req, res) => {
       stationName: 1,
     });
 
-    res.status(200).json(stations.map(formatStation));
+    res.status(200).json(await formatStationsWithCounts(stations));
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -78,7 +98,7 @@ export const getAllStationsAdmin = async (req, res) => {
     res.status(200).json({
       success: true,
       count: stations.length,
-      stations: stations.map(formatStation),
+      stations: await formatStationsWithCounts(stations),
     });
   } catch (error) {
     res.status(500).json({

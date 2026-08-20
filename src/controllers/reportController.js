@@ -46,9 +46,27 @@ export const getActiveBookingsReport = async (req, res) => {
   }
 };
 
+export const getUpcomingBookingsReport = async (req, res) => {
+  try {
+    const report = await reportService.getUpcomingBookings();
+    res.status(200).json(report);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const getCompletedBookingsReport = async (req, res) => {
   try {
     const report = await reportService.getCompletedBookings();
+    res.status(200).json(report);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getCancelledBookingsReport = async (req, res) => {
+  try {
+    const report = await reportService.getCancelledBookings();
     res.status(200).json(report);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

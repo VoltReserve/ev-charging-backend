@@ -32,8 +32,10 @@ const startServer = async () => {
   startBookingStatusJob();
 
   app.listen(PORT, "0.0.0.0", () => {
-    const localUrl = process.env.API_URL || `http://localhost:${PORT}`;
-    console.log(`Server running on ${localUrl}`);
+    console.log(`Server running on port ${PORT}`);
+    if (process.env.API_URL) {
+      console.log(`Public URL: ${process.env.API_URL}`);
+    }
   });
 };
 
